@@ -471,7 +471,7 @@ class API
      */
     public function useServerTime()
     {
-        $request = $this->httpRequest("v1/time");
+        $request = $this->httpRequest("v3/time");
         if (isset($request['serverTime'])) {
             $this->info['timeOffset'] = $request['serverTime'] - (microtime(true) * 1000);
         }
@@ -487,7 +487,7 @@ class API
      */
     public function time()
     {
-        return $this->httpRequest("v1/time");
+        return $this->httpRequest("v3/time");
     }
 
     /**
@@ -500,7 +500,7 @@ class API
      */
     public function exchangeInfo()
     {
-        return $this->httpRequest("v1/exchangeInfo");
+        return $this->httpRequest("v3/exchangeInfo");
     }
 
     /**
@@ -626,7 +626,7 @@ class API
      */
     public function prices()
     {
-        return $this->priceData($this->httpRequest("v3/ticker/price"));
+        return $this->priceData($this->httpRequest("v3/ticker/price") ?: []);
     }
 
     /**
@@ -687,7 +687,7 @@ class API
                 'symbol' => $symbol,
             ];
         }
-        return $this->httpRequest("v1/ticker/24hr", "GET", $additionalData);
+        return $this->httpRequest("v3/ticker/24hr", "GET", $additionalData);
     }
 
     /**
@@ -701,7 +701,7 @@ class API
      */
     public function aggTrades(string $symbol)
     {
-        return $this->tradesData($this->httpRequest("v1/aggTrades", "GET", [
+        return $this->tradesData($this->httpRequest("v3/aggTrades", "GET", [
             "symbol" => $symbol,
         ]));
     }
@@ -721,7 +721,7 @@ class API
             // WPCS: XSS OK.
             echo "asset: expected bool false, " . gettype($symbol) . " given" . PHP_EOL;
         }
-        $json = $this->httpRequest("v1/depth", "GET", [
+        $json = $this->httpRequest("v3/depth", "GET", [
             "symbol" => $symbol,
         ]);
         if (isset($this->info[$symbol]) === false) {
@@ -830,7 +830,7 @@ class API
      * @see buy()
      * @see sell()
      * @see marketBuy()
-     * @see marketSell() $this->httpRequest( "https://api.binance.com/api/v1/ticker/24hr");
+     * @see marketSell() $this->httpRequest( "https://api.binance.com/api/v3/ticker/24hr");
      *
      * @param $url string the endpoint to query, typically includes query string
      * @param $method string this should be typically GET, POST or DELETE
@@ -941,13 +941,14 @@ class API
         }
         curl_close($curl);
         $json = json_decode($output, true);
+        $this->transfered += strlen($output);
+        $this->requestCount++;
         if (isset($json['msg'])) {
             // should always output error, not only on httpdebug
             // not outputing errors, hides it from users and ends up with tickets on github
             echo "signedRequest error: {$output}" . PHP_EOL;
+            throw new \Exception($json['msg'], $json['code']);
         }
-        $this->transfered += strlen($output);
-        $this->requestCount++;
         return $json;
     }
 
@@ -958,7 +959,7 @@ class API
      * @see buy()
      * @see sell()
      * @see marketBuy()
-     * @see marketSell() $this->httpRequest( "https://api.binance.com/api/v1/ticker/24hr");
+     * @see marketSell() $this->httpRequest( "https://api.binance.com/api/v3/ticker/24hr");
      *
      * @param $side string typically "BUY" or "SELL"
      * @param $symbol string to buy or sell
@@ -1014,7 +1015,7 @@ class API
             $opt['newOrderRespType'] = $flags['newOrderRespType'];
         }
 
-        $qstring = ($test === false) ? "v3/order" : "v3/order/test";
+        $qstring = ($test == false) ? "v3/order" : "v3/order/test";
         return $this->httpRequest($qstring, "POST", $opt, true);
     }
 
@@ -1055,14 +1056,14 @@ class API
             $opt["endTime"] = $endTime;
         }
 
-        $response = $this->httpRequest("v1/klines", "GET", $opt);
+        $response = $this->httpRequest("v3/klines", "GET", $opt);
 
         if (is_array($response) === false) {
             return [];
         }
 
         if (count($response) === 0) {
-            echo "warning: v1/klines returned empty array, usually a blip in the connection or server" . PHP_EOL;
+            echo "warning: v3/klines returned empty array, usually a blip in the connection or server" . PHP_EOL;
             return [];
         }
 
@@ -1258,13 +1259,15 @@ class API
         $output = [];
         foreach ($ticks as $tick) {
             list($openTime, $open, $high, $low, $close, $assetVolume, $closeTime, $baseVolume, $trades, $assetBuyVolume, $takerBuyVolume, $ignored) = $tick;
-            $output[$openTime] = [
-                "open" => $open,
-                "high" => $high,
+            // LBT 
+            // $output[$openTime] = [ 
+            $output[] = [
+                "open" => $open, 
+                "high" => $high, 
                 "low" => $low,
                 "close" => $close,
                 "volume" => $baseVolume,
-                "openTime" => $openTime,
+                "openTime" => $openTime, 
                 "closeTime" => $closeTime,
                 "assetVolume" => $assetVolume,
                 "baseVolume" => $baseVolume,
@@ -1278,7 +1281,6 @@ class API
         if (isset($openTime)) {
             $this->info[$symbol][$interval]['firstOpen'] = $openTime;
         }
-
         return $output;
     }
 
@@ -2026,7 +2028,7 @@ class API
         $loop = \React\EventLoop\Factory::create();
         $loop->addPeriodicTimer(30, function () {
             $listenKey = $this->listenKey;
-            $this->httpRequest("v1/userDataStream?listenKey={$listenKey}", "PUT", []);
+            $this->httpRequest("v3/userDataStream?listenKey={$listenKey}", "PUT", []);
         });
         $loop->run();
     }
@@ -2071,7 +2073,7 @@ class API
      */
     public function userData(&$balance_callback, &$execution_callback = false)
     {
-        $response = $this->httpRequest("v1/userDataStream", "POST", []);
+        $response = $this->httpRequest("v3/userDataStream", "POST", []);
         $this->listenKey = $response['listenKey'];
         $this->info['balanceCallback'] = $balance_callback;
         $this->info['executionCallback'] = $execution_callback;
