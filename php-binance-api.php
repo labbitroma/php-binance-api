@@ -1,4 +1,10 @@
 <?php
+/*
+ * dentro php-binance-api fare un array protected di tutti gli endpoint, di cui possiamo poi fare l'override dentro la classe dei futures.
+ * togliere la versione che non va bene, perchè binance mixa le versioni a seconda dell'endpoint
+ * aggiungere alle funzuone stoploss e takeprofit il flag reduceonly
+ */
+
 
 /*
  * ============================================================
@@ -29,6 +35,28 @@ if (version_compare(phpversion(), '7.0', '<=')) {
 class API
 {
     protected $base = 'https://api.binance.com/api/'; // /< REST endpoint for the currency exchange
+    protected $endpoints = [
+        'order'	=> 'v3/order',
+        'order/test'	=> 'v3/order/test',
+        'openOrders'	=> 'v3/openOrders',
+        'allOrders'	=> 'v3/allOrders',
+        'myTrades'	=> 'v3/myTrades',
+        'time'	=> 'v3/time',
+        'exchangeInfo'	=> 'v3/exchangeInfo',
+        'withdraw'	=> 'v3/withdraw.html',
+        'depositAddress'	=> 'v3/depositAddress.html',
+        'depositHistory'	=> 'v3/depositHistory.html',
+        'withdrawHistory'	=> 'v3/withdrawHistory.html',
+        'withdrawFee'	=> 'v3/withdrawFee.html',
+        'ticker/price'	=> 'v3/ticker/price',
+        'ticker/bookTicker'	=> 'v3/ticker/bookTicker',
+        'account'	=> 'v3/account',
+        'ticker/24hr'	=> 'v3/ticker/24hr',
+        'aggTrades'	=> 'v3/aggTrades',
+        'depth'	=> 'v3/depth',
+        'klines'	=> 'v3/klines',
+        'userDataStream'	=> 'v3/userDataStream',  
+    ];
     protected $wapi = 'https://api.binance.com/wapi/'; // /< REST endpoint for the withdrawals
     protected $stream = 'wss://stream.binance.com:9443/ws/'; // /< Endpoint for establishing websocket connections
     protected $api_key; // /< API key that you created in the binance website member area
@@ -368,7 +396,7 @@ class API
      */
     public function cancel(string $symbol, $orderid)
     {
-        return $this->httpRequest("v3/order", "DELETE", [
+        return $this->httpRequest($this->endpoints['order'], "DELETE", [
             "symbol" => $symbol,
             "orderId" => $orderid,
         ], true);
@@ -387,7 +415,7 @@ class API
      */
     public function orderStatus(string $symbol, $orderid)
     {
-        return $this->httpRequest("v3/order", "GET", [
+        return $this->httpRequest($this->endpoints['order'], "GET", [
             "symbol" => $symbol,
             "orderId" => $orderid,
         ], true);
@@ -411,7 +439,7 @@ class API
                 "symbol" => $symbol,
             ];
         }
-        return $this->httpRequest("v3/openOrders", "GET", $params, true);
+        return $this->httpRequest($this->endpoints['openOrders'], "GET", $params, true);
     }
 
     /**
@@ -427,7 +455,7 @@ class API
      */
     public function orders(string $symbol, int $limit = 500, int $fromOrderId = 1)
     {
-        return $this->httpRequest("v3/allOrders", "GET", [
+        return $this->httpRequest($this->endpoints['allOrders'], "GET", [
             "symbol" => $symbol,
             "limit" => $limit,
             "orderId" => $fromOrderId,
@@ -458,7 +486,7 @@ class API
             $parameters["fromId"] = $fromTradeId;
         }
 
-        return $this->httpRequest("v3/myTrades", "GET", $parameters, true);
+        return $this->httpRequest($this->endpoints['myTrades'], "GET", $parameters, true);
     }
 
     /**
@@ -471,7 +499,7 @@ class API
      */
     public function useServerTime()
     {
-        $request = $this->httpRequest("v3/time");
+        $request = $this->httpRequest($this->endpoints['time']);
         if (isset($request['serverTime'])) {
             $this->info['timeOffset'] = $request['serverTime'] - (microtime(true) * 1000);
         }
@@ -487,7 +515,7 @@ class API
      */
     public function time()
     {
-        return $this->httpRequest("v3/time");
+        return $this->httpRequest($this->endpoints['time']);
     }
 
     /**
@@ -500,7 +528,7 @@ class API
      */
     public function exchangeInfo()
     {
-        return $this->httpRequest("v3/exchangeInfo");
+        return $this->httpRequest($this->endpoints['exchangeInfo']);
     }
 
     /**
@@ -535,7 +563,7 @@ class API
         if (is_null($addressTag) === false && is_empty($addressTag) === false) {
             $options['addressTag'] = $addressTag;
         }
-        return $this->httpRequest("v3/withdraw.html", "POST", $options, true);
+        return $this->httpRequest($this->endpoints['withdraw'], "POST", $options, true);
     }
 
     /**
@@ -553,7 +581,7 @@ class API
             "wapi" => true,
             "asset" => $asset,
         ];
-        return $this->httpRequest("v3/depositAddress.html", "GET", $params, true);
+        return $this->httpRequest($this->endpoints['depositAddress'], "GET", $params, true);
     }
 
     /**
@@ -574,7 +602,7 @@ class API
         if (is_null($asset) === false) {
             $params['asset'] = $asset;
         }
-        return $this->httpRequest("v3/depositHistory.html", "GET", $params, true);
+        return $this->httpRequest($this->endpoints['depositHistory'], "GET", $params, true);
     }
 
     /**
@@ -595,7 +623,7 @@ class API
         if (is_null($asset) === false) {
             $params['asset'] = $asset;
         }
-        return $this->httpRequest("v3/withdrawHistory.html", "GET", $params, true);
+        return $this->httpRequest($this->endpoints['withdrawHistory'], "GET", $params, true);
     }
 
     /**
@@ -613,7 +641,7 @@ class API
             "wapi" => true,
             "asset" => $asset,
         ];
-        return $this->httpRequest("v3/withdrawFee.html", "GET", $params, true);
+        return $this->httpRequest($this->endpoints['withdrawFee'], "GET", $params, true);
     }
 
     /**
@@ -626,7 +654,7 @@ class API
      */
     public function prices()
     {
-        return $this->priceData($this->httpRequest("v3/ticker/price") ?: []);
+        return $this->priceData($this->httpRequest($this->endpoints['ticker/price']) ?: []);
     }
 
     /**
@@ -639,7 +667,7 @@ class API
      */
     public function price(string $symbol)
     {
-        $ticker = $this->httpRequest("v3/ticker/price", "GET", ["symbol" => $symbol]);
+        $ticker = $this->httpRequest($this->endpoints['ticker/price'], "GET", ["symbol" => $symbol]);
 
         return $ticker['price'];
     }
@@ -654,7 +682,7 @@ class API
      */
     public function bookPrices()
     {
-        return $this->bookPriceData($this->httpRequest("v3/ticker/bookTicker"));
+        return $this->bookPriceData($this->httpRequest($this->endpoints['ticker/bookTicker']));
     }
 
     /**
@@ -667,7 +695,7 @@ class API
      */
     public function account()
     {
-        return $this->httpRequest("v3/account", "GET", [], true);
+        return $this->httpRequest($this->endpoints['account'], "GET", [], true);
     }
 
     /**
@@ -687,7 +715,7 @@ class API
                 'symbol' => $symbol,
             ];
         }
-        return $this->httpRequest("v3/ticker/24hr", "GET", $additionalData);
+        return $this->httpRequest($this->endpoints['ticker/24hr'], "GET", $additionalData);
     }
 
     /**
@@ -701,7 +729,7 @@ class API
      */
     public function aggTrades(string $symbol)
     {
-        return $this->tradesData($this->httpRequest("v3/aggTrades", "GET", [
+        return $this->tradesData($this->httpRequest($this->endpoints['aggTrades'], "GET", [
             "symbol" => $symbol,
         ]));
     }
@@ -721,7 +749,7 @@ class API
             // WPCS: XSS OK.
             echo "asset: expected bool false, " . gettype($symbol) . " given" . PHP_EOL;
         }
-        $json = $this->httpRequest("v3/depth", "GET", [
+        $json = $this->httpRequest($this->endpoints['depth'], "GET", [
             "symbol" => $symbol,
         ]);
         if (isset($this->info[$symbol]) === false) {
@@ -746,7 +774,7 @@ class API
             $priceData = false;
         }
 
-        $account = $this->httpRequest("v3/account", "GET", [], true);
+        $account = $this->httpRequest($this->endpoints['account'], "GET", [], true);
 
         if (is_array($account) === false) {
             echo "Error: unable to fetch your account details" . PHP_EOL;
@@ -839,7 +867,7 @@ class API
      * @return array containing the response
      * @throws \Exception
      */
-    private function httpRequest(string $url, string $method = "GET", array $params = [], bool $signed = false)
+    protected function httpRequest(string $url, string $method = "GET", array $params = [], bool $signed = false)
     {
         if (function_exists('curl_init') === false) {
             throw new \Exception("Sorry cURL is not installed!");
@@ -1015,7 +1043,7 @@ class API
             $opt['newOrderRespType'] = $flags['newOrderRespType'];
         }
 
-        $qstring = ($test == false) ? "v3/order" : "v3/order/test";
+        $qstring = ($test == false) ? $this->endpoints['order'] : $this->endpoints['order/test'];
         return $this->httpRequest($qstring, "POST", $opt, true);
     }
 
@@ -1056,14 +1084,14 @@ class API
             $opt["endTime"] = $endTime;
         }
 
-        $response = $this->httpRequest("v3/klines", "GET", $opt);
+        $response = $this->httpRequest($this->endpoints['klines'], "GET", $opt);
 
         if (is_array($response) === false) {
             return [];
         }
 
         if (count($response) === 0) {
-            echo "warning: v3/klines returned empty array, usually a blip in the connection or server" . PHP_EOL;
+            echo "warning: klines endpoint returned empty array, usually a blip in the connection or server" . PHP_EOL;
             return [];
         }
 
@@ -2028,7 +2056,7 @@ class API
         $loop = \React\EventLoop\Factory::create();
         $loop->addPeriodicTimer(30, function () {
             $listenKey = $this->listenKey;
-            $this->httpRequest("v3/userDataStream?listenKey={$listenKey}", "PUT", []);
+            $this->httpRequest($this->endpoints['userDataStream'] . "?listenKey={$listenKey}", "PUT", []);
         });
         $loop->run();
     }
@@ -2073,7 +2101,7 @@ class API
      */
     public function userData(&$balance_callback, &$execution_callback = false)
     {
-        $response = $this->httpRequest("v3/userDataStream", "POST", []);
+        $response = $this->httpRequest($this->endpoints['userDataStream'], "POST", []);
         $this->listenKey = $response['listenKey'];
         $this->info['balanceCallback'] = $balance_callback;
         $this->info['executionCallback'] = $execution_callback;
@@ -2210,5 +2238,21 @@ class API
 
         fwrite($fp, $result);
         fclose($fp);
+    }
+    
+    public function orderStatusByCustomId(string $symbol, $customId)
+    {
+        return $this->httpRequest($this->endpoints['order'], "GET", [
+            "symbol" => $symbol,
+            "origClientOrderId" => $customId,
+        ], true);
+    }
+    
+    public function cancelByCustomId(string $symbol, $customId)
+    {
+        return $this->httpRequest($this->endpoints['order'], "DELETE", [
+            "symbol" => $symbol,
+            "origClientOrderId" => $customId,
+        ], true);
     }
 }
