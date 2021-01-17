@@ -933,7 +933,7 @@ class API
         // PUT Method
         if ($method === "PUT") {
             curl_setopt($curl, CURLOPT_PUT, true);
-        }
+        }        
 
         // proxy settings
         if (is_array($this->proxyConf)) {
@@ -1111,7 +1111,7 @@ class API
      * @param $priceData array of prices
      * @return array containing the response
      */
-    private function balanceData(array $array, $priceData)
+    protected function balanceData(array $array, $priceData)
     {
         $balances = [];
 

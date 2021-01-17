@@ -57,13 +57,13 @@ class FAPI extends API
         'ticker/24hr'	=> 'v1/ticker/24hr',
         'aggTrades'	=> 'v1/aggTrades',
         'depth'	=> 'v1/depth',
-        'account'	=> 'v1/account',
+        'account'	=> 'v2/balance',
         'klines'	=> 'v1/klines',
         'userDataStream' => null
     ];
 
     public function __construct() {
-        parent::__construct();
+        parent::__construct(...func_get_args());
     }
     
    public function recentTrades(string $symbol) {
@@ -279,6 +279,29 @@ class FAPI extends API
             'reduceOnly' => $reduceOnly
         ];
         return $this->order($side, $symbol, $quantity, null, 'MARKET', $opt, $test);
+    }
+    
+    public function balances($priceData = false)
+    {
+        if (is_array($priceData) === false) {
+            $priceData = false;
+        }
+
+        $account = $this->httpRequest($this->endpoints['account'], "GET", [], true);
+
+        if (is_array($account) === false) {
+            echo "Error: unable to fetch your account details" . PHP_EOL;
+        }
+
+        foreach ($account as $data) {
+            $ret['balances'][] = [
+                "asset" => $data['asset'], 
+                "free" => floatval($data['availableBalance']),
+                "locked" => max(0, floatval($data['balance']) - floatval($data['availableBalance']))
+            ];            
+        }
+        
+        return $this->balanceData($ret, $priceData);
     }
     
 }
