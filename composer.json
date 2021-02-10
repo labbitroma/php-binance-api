@@ -23,7 +23,8 @@
         "minimum-stability": "stable"
     },
     "autoload": {
-        "classmap": [
+        "files": [
+	  "php-binance-api.php",
           "php-binance-futures.php"
         ]
     }

@@ -25,7 +25,7 @@ require_once(dirname(__FILE__) . "/php-binance-api.php");
 
 class FAPI extends API
 {
-    protected $base = 'https://fapi.binance.com/fapi/'; 
+    protected $base = 'https://fapi.binance.com/fapi/';
     protected $endpoints = [
         'trades' => 'v1/trades',
         'historicalTrades' => 'v1/historicalTrades',
@@ -42,6 +42,7 @@ class FAPI extends API
         
         'order'	=> 'v1/order',
         'order/test'	=> 'v1/order/test',
+        'openOrder'	=> 'v1/openOrder',
         'openOrders'	=> 'v1/openOrders',
         'allOrders'	=> 'v1/allOrders',
         'myTrades'	=> null,
@@ -58,12 +59,16 @@ class FAPI extends API
         'aggTrades'	=> 'v1/aggTrades',
         'depth'	=> 'v1/depth',
         'account'	=> 'v2/balance',
+        'positions'	=> 'v2/account',
         'klines'	=> 'v1/klines',
         'userDataStream' => null
     ];
 
     public function __construct() {
         parent::__construct(...func_get_args());
+        if (defined("BINANCE_API_ENDPOINT")) {
+            $this->base = BINANCE_API_ENDPOINT . '/fapi/';
+        }
     }
     
    public function recentTrades(string $symbol) {
@@ -178,6 +183,7 @@ class FAPI extends API
             "side" => $side,
             "type" => $type,
             "recvWindow" => 60000,
+            "quantity" => $quantity
         ], $flags);
 
         // someone has preformated there 8 decimal point double already
@@ -187,7 +193,7 @@ class FAPI extends API
             $price = number_format($price, 8, '.', '');
         }
         
-        if (gettype($opt['stopPrice']) !== "string") {
+        if ($opt['stopPrice']) {
             // for every other type, lets format it appropriately
             $opt['stopPrice'] = number_format($opt['stopPrice'], 8, '.', '');
         }
@@ -214,6 +220,7 @@ class FAPI extends API
         }
 
         $qstring = ($test == false) ? $this->endpoints['order'] : $this->endpoints['order/test'];
+        //var_dump($qstring, $opt);
         return $this->httpRequest($qstring, "POST", $opt, true);
     }
     
@@ -259,24 +266,27 @@ class FAPI extends API
         return $this->order($forSide, $symbol, $quantity, $price, 'MARKET', [], $test);
     }
     
-    public function stopTrade(string $side, string $symbol, $price, $quantity, $reduceOnly, $test = false) {
+    public function stopTrade(string $key, string $side, string $symbol, $price, $quantity, $reduceOnly, $test = false) {
         $opt = [ 
             'stopPrice' => $price,
-            'reduceOnly' => $reduceOnly
+            'reduceOnly' => $reduceOnly,
+            'newClientOrderId' => $key
         ];
         return $this->order($side, $symbol, $quantity, null, 'STOP_MARKET', $opt, $test);
     }
     
-    public function limitTrade(string $side, string $symbol, $price, $quantity, $reduceOnly, $test = false) {
+    public function limitTrade(string $key, string $side, string $symbol, $price, $quantity, $reduceOnly, $test = false) {
         $opt = [ 
-            'reduceOnly' => $reduceOnly
+            'reduceOnly' => $reduceOnly,
+            'newClientOrderId' => $key
         ];
         return $this->order($side, $symbol, $quantity, $price, 'LIMIT', $opt, $test);
     }
     
-    public function marketTrade(string $side, string $symbol, $quantity, $reduceOnly, $test = false) {
+    public function marketTrade(string $key, string $side, string $symbol, $quantity, $reduceOnly, $test = false) {
         $opt = [ 
-            'reduceOnly' => $reduceOnly
+            'reduceOnly' => $reduceOnly,
+            'newClientOrderId' => $key
         ];
         return $this->order($side, $symbol, $quantity, null, 'MARKET', $opt, $test);
     }
@@ -286,13 +296,11 @@ class FAPI extends API
         if (is_array($priceData) === false) {
             $priceData = false;
         }
-
         $account = $this->httpRequest($this->endpoints['account'], "GET", [], true);
-
         if (is_array($account) === false) {
             echo "Error: unable to fetch your account details" . PHP_EOL;
         }
-
+        $ret = [];
         foreach ($account as $data) {
             $ret['balances'][] = [
                 "asset" => $data['asset'], 
@@ -300,8 +308,38 @@ class FAPI extends API
                 "locked" => max(0, floatval($data['balance']) - floatval($data['availableBalance']))
             ];            
         }
-        
         return $this->balanceData($ret, $priceData);
     }
+    
+    public function positions() {
+        $account = $this->httpRequest($this->endpoints['positions'], "GET", [], true);
+        return $account['positions'];
+    }
+    
+    public function position($symbol) {
+        $account = $this->httpRequest($this->endpoints['positions'], "GET", [], true);
+        foreach ($account['positions'] as $pos) {
+            if ($pos['symbol'] == $symbol) {
+                return $pos;
+            }
+        }
+        return null;
+    }
+    
+    public function openOrderStatusByCustomId($symbol, $customId) {
+        $params = [
+            'symbol' => $symbol,
+            'origClientOrderId' => $customId
+        ];
+        return $this->httpRequest($this->endpoints['openOrder'], "GET", $params, true);
+    }
+    
+    public function openOrderStatus($symbol, $orderid) {
+        return $this->httpRequest($this->endpoints['openOrder'], "GET", [
+            "symbol" => $symbol,
+            "orderId" => $orderid,
+        ], true);
+    }
+    
     
 }

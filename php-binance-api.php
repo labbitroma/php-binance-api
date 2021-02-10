@@ -1,10 +1,4 @@
 <?php
-/*
- * dentro php-binance-api fare un array protected di tutti gli endpoint, di cui possiamo poi fare l'override dentro la classe dei futures.
- * togliere la versione che non va bene, perchè binance mixa le versioni a seconda dell'endpoint
- * aggiungere alle funzuone stoploss e takeprofit il flag reduceonly
- */
-
 
 /*
  * ============================================================
@@ -2242,10 +2236,13 @@ class API
     
     public function orderStatusByCustomId(string $symbol, $customId)
     {
-        return $this->httpRequest($this->endpoints['order'], "GET", [
+        $this->httpDebug = true;
+        $rs = $this->httpRequest($this->endpoints['order'], "GET", [
             "symbol" => $symbol,
             "origClientOrderId" => $customId,
         ], true);
+        $this->httpDebug = false;
+        return $rs;
     }
     
     public function cancelByCustomId(string $symbol, $customId)
