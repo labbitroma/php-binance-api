@@ -65,10 +65,10 @@ class FAPI extends API
     ];
 
     public function __construct() {
-        parent::__construct(...func_get_args());
         if (defined("BINANCE_API_ENDPOINT")) {
             $this->base = BINANCE_API_ENDPOINT . '/fapi/';
         }
+        parent::__construct(...func_get_args());
     }
     
    public function recentTrades(string $symbol) {
