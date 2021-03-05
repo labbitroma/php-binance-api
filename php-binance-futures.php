@@ -39,6 +39,7 @@ class FAPI extends API
         'topLongShortPositionRatio' => '/futures/data/topLongShortAccountRatio',
         'globalLongShortAccountRatio' => '/futures/data/topLongShortAccountRatio',
         'takerlongshortRatio' => '/futures/data/topLongShortAccountRatio',
+        'marginType' => 'v1/marginType',
         
         'order'	=> 'v1/order',
         'order/test'	=> 'v1/order/test',
@@ -338,6 +339,13 @@ class FAPI extends API
         return $this->httpRequest($this->endpoints['openOrder'], "GET", [
             "symbol" => $symbol,
             "orderId" => $orderid,
+        ], true);
+    }
+    
+    public function setMarginType($symbol, $type) {
+        return $this->httpRequest($this->endpoints['marginType'], "POST", [
+            "symbol" => $symbol,
+            "marginType" => $type,
         ], true);
     }
     
