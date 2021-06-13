@@ -230,9 +230,9 @@ class FAPI extends API
             'stopPrice' => $triggerPrice 
         ];
         if (!$quantity) {
-            $opt['closePosition'] = true;
+            $opt['closePosition'] = "true";
         } else {
-            $opt['reduceOnly'] = true;
+            $opt['reduceOnly'] = "true";
         }
         $type = ($limitPrice ? 'TAKE_PROFIT' : 'TAKE_PROFIT_MARKET');
         return $this->order($forSide, $symbol, $quantity, $limitPrice, $type, $opt, $test);
@@ -243,9 +243,9 @@ class FAPI extends API
             'stopPrice' => $triggerPrice 
         ];
         if (!$quantity) {
-            $opt['closePosition'] = true;
+            $opt['closePosition'] = "true";
         } else {
-            $opt['reduceOnly'] = true;
+            $opt['reduceOnly'] = "true";
         }
         $type = ($limitPrice ? 'STOP' : 'STOP_MARKET');
         return $this->order($side, $symbol, $quantity, $limitPrice, $type, $opt, $test);
@@ -270,7 +270,7 @@ class FAPI extends API
     public function stopTrade(string $key, string $side, string $symbol, $price, $quantity, $reduceOnly, $test = false) {
         $opt = [ 
             'stopPrice' => $price,
-            'reduceOnly' => $reduceOnly,
+            'reduceOnly' => $reduceOnly ? "true" : "false",
             'newClientOrderId' => $key
         ];
         return $this->order($side, $symbol, $quantity, null, 'STOP_MARKET', $opt, $test);
@@ -278,7 +278,7 @@ class FAPI extends API
     
     public function limitTrade(string $key, string $side, string $symbol, $price, $quantity, $reduceOnly, $test = false) {
         $opt = [ 
-            'reduceOnly' => $reduceOnly,
+            'reduceOnly' => $reduceOnly ? "true" : "false",
             'newClientOrderId' => $key
         ];
         return $this->order($side, $symbol, $quantity, $price, 'LIMIT', $opt, $test);
@@ -286,7 +286,7 @@ class FAPI extends API
     
     public function marketTrade(string $key, string $side, string $symbol, $quantity, $reduceOnly, $test = false) {
         $opt = [ 
-            'reduceOnly' => $reduceOnly,
+            'reduceOnly' => $reduceOnly ? "true" : "false",
             'newClientOrderId' => $key
         ];
         return $this->order($side, $symbol, $quantity, null, 'MARKET', $opt, $test);
